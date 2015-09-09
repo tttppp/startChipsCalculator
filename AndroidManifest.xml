@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.github.tttppp.regexEvaluator"
+    package="com.github.tttppp.startChipsCalculator"
     android:versionCode="1"
     android:versionName="1.0" >
 
@@ -12,7 +12,7 @@
         android:allowBackup="true" >
         <activity
             android:label="@string/app_name"
-            android:name="com.github.tttppp.regexEvaluator.RegexEvaluatorActivity" >
+            android:name="com.github.tttppp.startChipsCalculator.StartChipsCalculatorActivity" >
             <intent-filter >
                 <action android:name="android.intent.action.MAIN" />
 

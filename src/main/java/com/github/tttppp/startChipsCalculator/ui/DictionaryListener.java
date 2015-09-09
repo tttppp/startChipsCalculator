@@ -1,4 +1,4 @@
-package com.github.tttppp.regexEvaluator.ui;
+package com.github.tttppp.startChipsCalculator.ui;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +7,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 
-import com.github.tttppp.regexEvaluator.process.OutputUpdater;
+import com.github.tttppp.startChipsCalculator.process.OutputUpdater;
 
 public class DictionaryListener implements OnItemSelectedListener {
 	private OutputUpdater outputUpdater;
@@ -16,8 +16,7 @@ public class DictionaryListener implements OnItemSelectedListener {
 		this.outputUpdater = outputUpdater;
 	}
 
-	public void onItemSelected(AdapterView<?> parentView,
-	                           View selectedItemView, int position, long id) {
+	public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
 		List<String> dictionaries = new ArrayList<String>();
 		for (int i = 0; i <= position; i++) {
 			String dictionary = parentView.getItemAtPosition(i).toString();

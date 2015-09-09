@@ -3,11 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.github.tttppp</groupId>
-  <artifactId>regexEvaluator</artifactId>
+  <artifactId>startChipsCalculator</artifactId>
   <version>1.0.1</version>
   <packaging>apk</packaging>
 
-  <name>RegexEvaluator</name>
+  <name>StartChipsCalculator</name>
 
   <dependencies>
 	<dependency>

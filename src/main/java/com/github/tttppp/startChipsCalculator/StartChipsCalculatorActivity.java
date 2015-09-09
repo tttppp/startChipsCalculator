@@ -1,4 +1,4 @@
-package com.github.tttppp.regexEvaluator;
+package com.github.tttppp.startChipsCalculator;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -9,13 +9,13 @@ import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import com.github.tttppp.regexEvaluator.process.OutputUpdater;
-import com.github.tttppp.regexEvaluator.ui.DictionaryListener;
-import com.github.tttppp.regexEvaluator.ui.OutputTextViewWrapper;
-import com.github.tttppp.regexEvaluator.ui.ProgressBarWrapper;
-import com.github.tttppp.regexEvaluator.ui.RegexListener;
+import com.github.tttppp.startChipsCalculator.process.OutputUpdater;
+import com.github.tttppp.startChipsCalculator.ui.DictionaryListener;
+import com.github.tttppp.startChipsCalculator.ui.OutputTextViewWrapper;
+import com.github.tttppp.startChipsCalculator.ui.ProgressBarWrapper;
+import com.github.tttppp.startChipsCalculator.ui.InputListener;
 
-public class RegexEvaluatorActivity extends Activity {
+public class StartChipsCalculatorActivity extends Activity {
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -23,22 +23,18 @@ public class RegexEvaluatorActivity extends Activity {
 		setContentView(R.layout.main);
 
 		TextView output = (TextView) findViewById(R.id.outputTextView);
-		OutputTextViewWrapper outputTextViewWrapper = new OutputTextViewWrapper(
-		                                                                        output);
+		OutputTextViewWrapper outputTextViewWrapper = new OutputTextViewWrapper(output);
 
 		ProgressBar progressBar = (ProgressBar) findViewById(R.id.outputProgressBar);
-		ProgressBarWrapper progressBarWrapper = new ProgressBarWrapper(
-		                                                               progressBar);
+		ProgressBarWrapper progressBarWrapper = new ProgressBarWrapper(progressBar);
 
-		OutputUpdater outputUpdater = new OutputUpdater(outputTextViewWrapper,
-		                                                progressBarWrapper);
+		OutputUpdater outputUpdater = new OutputUpdater(outputTextViewWrapper, progressBarWrapper);
 
 		EditText input = (EditText) findViewById(R.id.inputEditText);
-		input.addTextChangedListener(new RegexListener(input, outputUpdater));
+		input.addTextChangedListener(new InputListener(input, outputUpdater));
 
 		Spinner dictionarySpinner = (Spinner) findViewById(R.id.dictionarySpinner);
-		OnItemSelectedListener dictionaryListner = new DictionaryListener(
-		                                                                  outputUpdater);
+		OnItemSelectedListener dictionaryListner = new DictionaryListener(outputUpdater);
 		dictionarySpinner.setOnItemSelectedListener(dictionaryListner);
 		String[] dictionaryArray = new String[10];
 		dictionaryArray[0] = "english-words.10.txt";

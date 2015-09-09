@@ -1,4 +1,4 @@
-package com.github.tttppp.regexEvaluator.process;
+package com.github.tttppp.startChipsCalculator.process;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
@@ -14,8 +14,10 @@ import java.util.regex.PatternSyntaxException;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.github.tttppp.regexEvaluator.ui.OutputTextViewWrapper;
-import com.github.tttppp.regexEvaluator.ui.ProgressBarWrapper;
+import com.github.tttppp.startChipsCalculator.process.OutputUpdater;
+import com.github.tttppp.startChipsCalculator.process.OutputUpdaterTaskRunner;
+import com.github.tttppp.startChipsCalculator.ui.OutputTextViewWrapper;
+import com.github.tttppp.startChipsCalculator.ui.ProgressBarWrapper;
 
 public class OutputUpdaterTest {
 	/** The class under test. */
@@ -29,25 +31,22 @@ public class OutputUpdaterTest {
 	public void setup() {
 		reset(mockOutputTextViewWrapper, mockProgressBarWrapper, mockFactory);
 
-		outputUpdater = new OutputUpdater(mockOutputTextViewWrapper,
-		                                  mockProgressBarWrapper);
+		outputUpdater = new OutputUpdater(mockOutputTextViewWrapper, mockProgressBarWrapper);
 		outputUpdater.setOutputUpdaterTaskFactory(mockFactory);
 	}
 
 	@Test
 	public void testRegexChanged_valid() {
-		outputUpdater.regexChanged("apple");
+		outputUpdater.inputChanged("apple");
 
-		verify(mockFactory).createAndExecute(eq(mockProgressBarWrapper),
-		                                     eq(mockOutputTextViewWrapper),
-		                                     any(List.class),
-		                                     any(Pattern.class));
+		verify(mockFactory).createAndExecute(eq(mockProgressBarWrapper), eq(mockOutputTextViewWrapper),
+		                                     any(List.class), any(Pattern.class));
 		// verify(mockOutputTextViewWrapper).setText("apple\napple's");
 	}
 
 	@Test
 	public void testRegexChanged_invalid() {
-		outputUpdater.regexChanged("appl[");
+		outputUpdater.inputChanged("appl[");
 
 		String expected = "";
 		try {
@@ -67,10 +66,8 @@ public class OutputUpdaterTest {
 		// Method under test.
 		outputUpdater.dictionaryChanged(Arrays.asList("english-words.35.txt"));
 
-		verify(mockFactory).createAndExecute(eq(mockProgressBarWrapper),
-		                                     eq(mockOutputTextViewWrapper),
-		                                     any(List.class),
-		                                     any(Pattern.class));
+		verify(mockFactory).createAndExecute(eq(mockProgressBarWrapper), eq(mockOutputTextViewWrapper),
+		                                     any(List.class), any(Pattern.class));
 		// verify(mockOutputTextViewWrapper)
 		// .setText("apples\ngrapple\ngrappled\ngrapples\npineapple\npineapple's\npineapples");
 	}
@@ -81,14 +78,11 @@ public class OutputUpdaterTest {
 		// testRegexChanged_valid();
 
 		// Method under test.
-		outputUpdater.dictionaryChanged(Arrays.asList("english-words.10.txt",
-		                                              "english-words.20.txt",
+		outputUpdater.dictionaryChanged(Arrays.asList("english-words.10.txt", "english-words.20.txt",
 		                                              "english-words.35.txt"));
 
-		verify(mockFactory).createAndExecute(eq(mockProgressBarWrapper),
-		                                     eq(mockOutputTextViewWrapper),
-		                                     any(List.class),
-		                                     any(Pattern.class));
+		verify(mockFactory).createAndExecute(eq(mockProgressBarWrapper), eq(mockOutputTextViewWrapper),
+		                                     any(List.class), any(Pattern.class));
 		// verify(mockOutputTextViewWrapper)
 		// .setText("apple\napple's\napples\ngrapple\ngrappled\ngrapples\npineapple\npineapple's\npineapples");
 	}

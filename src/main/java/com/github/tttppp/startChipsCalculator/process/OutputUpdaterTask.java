@@ -1,4 +1,4 @@
-package com.github.tttppp.regexEvaluator.process;
+package com.github.tttppp.startChipsCalculator.process;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,10 +16,10 @@ import org.apache.commons.lang3.StringUtils;
 import android.os.AsyncTask;
 import android.view.View;
 
-import com.github.tttppp.regexEvaluator.ui.OutputTextViewWrapper;
-import com.github.tttppp.regexEvaluator.ui.ProgressBarWrapper;
+import com.github.tttppp.startChipsCalculator.ui.OutputTextViewWrapper;
+import com.github.tttppp.startChipsCalculator.ui.ProgressBarWrapper;
 
-public class OutputUpdaterTask extends AsyncTask<Pattern, Integer, String> {
+public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, String> {
 	/** The maximum number of words to put in the output. */
 	private static final int MAX_WORDS = 100;
 
@@ -37,8 +37,7 @@ public class OutputUpdaterTask extends AsyncTask<Pattern, Integer, String> {
 	 * @param progressBarWrapper The progress bar to update periodically.
 	 * @param output The wrapper for the output UI field.
 	 */
-	public OutputUpdaterTask(ProgressBarWrapper progressBarWrapper,
-	                         OutputTextViewWrapper output,
+	public OutputUpdaterTask(ProgressBarWrapper progressBarWrapper, OutputTextViewWrapper output,
 	                         List<String> dictionaries) {
 		this.progressBarWrapper = progressBarWrapper;
 		this.output = output;
@@ -55,21 +54,18 @@ public class OutputUpdaterTask extends AsyncTask<Pattern, Integer, String> {
 	 * {@inheritDoc}
 	 */
 	@Override
-	protected String doInBackground(Pattern... patterns) {
-		Pattern pattern = patterns[0];
+	protected String doInBackground(InputParameters... args) {
+		InputParameters inputParameters = args[0];
 
 		List<String> outputWords = new ArrayList<String>();
 		for (String dictionary : dictionaries) {
-			InputStream wordsStream = Thread.currentThread()
-			    .getContextClassLoader().getResourceAsStream(dictionary);
-			BufferedReader wordsBuffer = new BufferedReader(
-			                                                new InputStreamReader(
-			                                                                      wordsStream));
+			InputStream wordsStream = Thread.currentThread().getContextClassLoader()
+			    .getResourceAsStream(dictionary);
+			BufferedReader wordsBuffer = new BufferedReader(new InputStreamReader(wordsStream));
 
 			String word = wordFromBuffer(wordsBuffer);
-			while (word != null && !outputWords.contains(word)
-			    && outputWords.size() < MAX_WORDS) {
-				String matchedWord = matchWord(word, pattern);
+			while (word != null && !outputWords.contains(word) && outputWords.size() < MAX_WORDS) {
+				String matchedWord = matchWord(word, inputParameters);
 				if (matchedWord != null) {
 					outputWords.add(matchedWord);
 					updateProgress(outputWords, dictionary);
@@ -127,8 +123,7 @@ public class OutputUpdaterTask extends AsyncTask<Pattern, Integer, String> {
 	 * @param dictionary The dictionary currently being checked.
 	 */
 	private void updateProgress(List<String> outputWords, String dictionary) {
-		onProgressUpdate(outputWords.size(), dictionaries.indexOf(dictionary),
-		                 dictionaries.size());
+		onProgressUpdate(outputWords.size(), dictionaries.indexOf(dictionary), dictionaries.size());
 	}
 
 	/**
@@ -147,8 +142,7 @@ public class OutputUpdaterTask extends AsyncTask<Pattern, Integer, String> {
 
 		int max = progressBarWrapper.getMax();
 
-		int progress = Math.max(max * words / MAX_WORDS, max * files
-		    / totalFiles);
+		int progress = Math.max(max * words / MAX_WORDS, max * files / totalFiles);
 		progressBarWrapper.setProgress(progress);
 	}
 

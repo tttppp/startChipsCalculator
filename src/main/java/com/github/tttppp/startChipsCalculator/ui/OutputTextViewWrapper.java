@@ -1,4 +1,4 @@
-package com.github.tttppp.regexEvaluator.ui;
+package com.github.tttppp.startChipsCalculator.ui;
 
 import android.widget.TextView;
 

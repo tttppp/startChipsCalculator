@@ -1,27 +1,26 @@
-package com.github.tttppp.regexEvaluator.ui;
+package com.github.tttppp.startChipsCalculator.ui;
 
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.widget.EditText;
 
-import com.github.tttppp.regexEvaluator.process.OutputUpdater;
+import com.github.tttppp.startChipsCalculator.process.OutputUpdater;
 
-public class RegexListener implements TextWatcher {
+public class InputListener implements TextWatcher {
 
 	private EditText input;
 	private OutputUpdater outputUpdater;
 
-	public RegexListener(EditText input, OutputUpdater outputUpdater) {
+	public InputListener(EditText input, OutputUpdater outputUpdater) {
 		this.input = input;
 		this.outputUpdater = outputUpdater;
 	}
 
 	public void afterTextChanged(Editable unused) {
-		outputUpdater.regexChanged(input.getText().toString());
+		outputUpdater.inputChanged(input.getText().toString());
 	}
 
-	public void beforeTextChanged(CharSequence arg0, int arg1, int arg2,
-	                              int arg3) {
+	public void beforeTextChanged(CharSequence arg0, int arg1, int arg2, int arg3) {
 		// TODO Auto-generated method stub
 
 	}
