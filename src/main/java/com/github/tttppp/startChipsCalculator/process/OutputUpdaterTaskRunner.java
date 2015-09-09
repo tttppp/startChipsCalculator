@@ -13,7 +13,7 @@ public class OutputUpdaterTaskRunner {
 		if (outputUpdaterTask != null) {
 			outputUpdaterTask.cancel(true);
 		}
-		outputUpdaterTask = new OutputUpdaterTask(progressBarWrapper, output, dictionaries);
+		outputUpdaterTask = new OutputUpdaterTask(progressBarWrapper, output);
 		outputUpdaterTask.execute(inputParameters);
 	}
 }

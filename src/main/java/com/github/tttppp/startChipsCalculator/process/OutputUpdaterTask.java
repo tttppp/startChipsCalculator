@@ -1,15 +1,11 @@
 package com.github.tttppp.startChipsCalculator.process;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Map;
+import java.util.Random;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -20,16 +16,26 @@ import com.github.tttppp.startChipsCalculator.ui.OutputTextViewWrapper;
 import com.github.tttppp.startChipsCalculator.ui.ProgressBarWrapper;
 
 public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, String> {
-	/** The maximum number of words to put in the output. */
-	private static final int MAX_WORDS = 100;
+	private static final int PRNG_SEED = 1234;
+	// Probably not for changing
+	private static final int START_CHIPS_RATIO = 3;
+	private static final int REBUY_CHIPS_RATIO = 1;
+	private static final List<Integer> PREFERRED_INITIAL_PLAYER_CHIP_COUNT = Arrays.asList(1000, 500, 200,
+	                                                                                       100, 20, 4);
+
+	// Not for changing
+	private static final List<Integer> VALID_CHIP_BASES = Arrays.asList(1, 2, 5, 25);
+	private static final List<Integer> INCREMENTS = Arrays.asList(2, 4, 5, 10);
+
+	/** Seeded random number generator. */
+	private Random random;
+	/** Why is this a field? */
+	private Map<List<Integer>, Integer> baseMultipleMap = new HashMap<List<Integer>, Integer>();
 
 	/** The progress bar to update periodically. */
 	private ProgressBarWrapper progressBarWrapper;
 	/** The wrapper for the output UI field. */
 	private OutputTextViewWrapper output;
-
-	/** The list of dictionaries to check. */
-	private List<String> dictionaries = Arrays.asList("english-words.10.txt");
 
 	/**
 	 * Constructor.
@@ -37,17 +43,153 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 	 * @param progressBarWrapper The progress bar to update periodically.
 	 * @param output The wrapper for the output UI field.
 	 */
-	public OutputUpdaterTask(ProgressBarWrapper progressBarWrapper, OutputTextViewWrapper output,
-	                         List<String> dictionaries) {
+	public OutputUpdaterTask(ProgressBarWrapper progressBarWrapper, OutputTextViewWrapper output) {
 		this.progressBarWrapper = progressBarWrapper;
 		this.output = output;
-		this.dictionaries = dictionaries;
 	}
 
 	/** Show the progress bar. */
 	@Override
 	protected void onPreExecute() {
 		progressBarWrapper.setVisibility(View.VISIBLE);
+	}
+
+	class Config {
+		public int players;
+		public List<Integer> denominations;
+		public int baseMultiple;
+
+		public Config(int players, List<Integer> denominations, int baseMultiple) {
+			this.players = players;
+			this.denominations = denominations;
+			this.baseMultiple = baseMultiple;
+		}
+
+		@Override
+		public String toString() {
+			List<String> denominationsStrs = new ArrayList<String>();
+			for (int d : denominations) {
+				denominationsStrs.add(String.valueOf(baseMultiple * d));
+			}
+			return String.valueOf(players) + ", " + denominationsStrs;
+		}
+	}
+
+	private boolean isOk(List<Integer> denominations) {
+		for (int d : denominations) {
+			while (d % 10 == 0) {
+				d = d / 10;
+			}
+			if (!VALID_CHIP_BASES.contains(d)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean useableByHumans(List<Integer> denominations) {
+		for (int multiplier : VALID_CHIP_BASES) {
+			List<Integer> cashDenominations = new ArrayList<Integer>();
+			for (int d : denominations) {
+				cashDenominations.add(d * multiplier);
+			}
+			if (isOk(cashDenominations)) {
+				baseMultipleMap.put(denominations, multiplier);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private List<List<Integer>> makeDenominationsList(int colours, int current, List<Integer> partialList) {
+		if (partialList.size() == colours) {
+			// Check if the completed list is actually usable by humans
+			if (useableByHumans(partialList)) {
+				return Arrays.asList(partialList);
+			} else {
+				return new ArrayList<List<Integer>>();
+			}
+		}
+		List<List<Integer>> returnList = new ArrayList<List<Integer>>();
+		for (int i : INCREMENTS) {
+			List<Integer> newPartial = new ArrayList<Integer>(partialList);
+			newPartial.add(i * current);
+			returnList.addAll(makeDenominationsList(colours, i * current, newPartial));
+		}
+		return returnList;
+	}
+
+	private List<List<Integer>> splitChips(int colours, int players, List<Integer> quantities) {
+		List<List<Integer>> splitPointsList = new ArrayList<List<Integer>>();
+		for (int c = 0; c < colours; c++) {
+			List<Integer> splitPoints = new ArrayList<Integer>();
+			splitPoints.add(0);
+			for (int p = 0; p < players; p++) {
+				splitPoints.add(random.nextInt(quantities.get(c)));
+			}
+			splitPoints.add(quantities.get(c));
+			splitPointsList.add(splitPoints);
+		}
+		List<List<Integer>> split = new ArrayList<List<Integer>>();
+		for (int player = 0; player < players; player++) {
+			List<Integer> s = new ArrayList<Integer>();
+			for (int c = 0; c < colours; c++) {
+				s.add(splitPointsList.get(c).get(player + 1) - splitPointsList.get(c).get(player));
+			}
+			split.add(s);
+		}
+		return split;
+	}
+
+	private int findMinUnmakable(int colours, List<Integer> playersChips, List<Integer> denominations) {
+		int carry = 0;
+		for (int i = 0; i < colours - 1; i++) {
+			int quantity = playersChips.get(i) + carry;
+			int denomination = denominations.get(i);
+			int ratio = denominations.get(i + 1) / denomination;
+			if (quantity < ratio - 1) {
+				return (quantity + 1) * denomination;
+			}
+			carry = (quantity / ratio);
+		}
+		// Handle case for top colour (this gives a lower amount than is
+		// actually possible)
+		return (playersChips.get(colours - 1) + carry) * denominations.get(colours - 1);
+	}
+
+	private int chipsPerPlayerOfGivenColour(List<Integer> quantities, int players, int i) {
+		return quantities.get(i) / players;
+	}
+
+	private List<Integer> computeCashPerPlayer(int colours, int baseMultiple, List<Integer> denominations,
+	                                           List<Integer> cashPerPlayerOfGivenColour, int cashTarget) {
+		List<Integer> outputCashPerPlayer = new ArrayList<Integer>();
+		// Assume we can do it entirely with the smallest chips
+		outputCashPerPlayer.add(cashTarget);
+		for (int colour = 1; colour < colours; colour++) {
+			int cashInThisColour = 0;
+			if (outputCashPerPlayer.get(colour - 1) > cashPerPlayerOfGivenColour.get(colour - 1)) {
+				int amountTooMuch = outputCashPerPlayer.get(colour - 1)
+				    - cashPerPlayerOfGivenColour.get(colour - 1);
+				// Ensure we round up to next multiple if there's a
+				// fraction.
+				cashInThisColour = ((amountTooMuch - 1) / (denominations.get(colour) * baseMultiple) + 1)
+				    * denominations.get(colour) * baseMultiple;
+				outputCashPerPlayer.set(colour - 1, outputCashPerPlayer.get(colour - 1) - cashInThisColour);
+			}
+			outputCashPerPlayer.add(cashInThisColour);
+		}
+		return outputCashPerPlayer;
+	}
+
+	private List<Integer> findNumberOfChipsFromCash(int colours, int baseMultiple,
+	                                                List<Integer> denominations, List<Integer> cashPerPlayer) {
+		List<Integer> chipsPerPlayer = new ArrayList<Integer>();
+		for (int colour = 0; colour < colours; colour++) {
+			chipsPerPlayer.add(cashPerPlayer.get(colour) / (denominations.get(colour) * baseMultiple));
+		}
+		return chipsPerPlayer;
 	}
 
 	/**
@@ -57,63 +199,120 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 	protected String doInBackground(InputParameters... args) {
 		InputParameters inputParameters = args[0];
 
-		List<String> outputWords = new ArrayList<String>();
-		for (String dictionary : dictionaries) {
-			InputStream wordsStream = Thread.currentThread().getContextClassLoader()
-			    .getResourceAsStream(dictionary);
-			BufferedReader wordsBuffer = new BufferedReader(new InputStreamReader(wordsStream));
+		int players = inputParameters.getPlayers();
+		int colours = inputParameters.getColours();
+		List<Integer> quantities = inputParameters.getQuantities();
 
-			String word = wordFromBuffer(wordsBuffer);
-			while (word != null && !outputWords.contains(word) && outputWords.size() < MAX_WORDS) {
-				String matchedWord = matchWord(word, inputParameters);
-				if (matchedWord != null) {
-					outputWords.add(matchedWord);
-					updateProgress(outputWords, dictionary);
+		// Ensure the same seed is used each time.
+		random = new Random(PRNG_SEED);
+
+		// Create configs
+		List<List<Integer>> denominationList = makeDenominationsList(colours, 1, Arrays.asList(1));
+
+		List<Config> configs = new ArrayList<Config>();
+		for (List<Integer> denominations : denominationList) {
+			configs.add(new Config(players, denominations, baseMultipleMap.get(denominations)));
+		}
+
+		Map<Config, List<Integer>> scoring = new HashMap<Config, List<Integer>>();
+
+		for (int loop = 0; loop < 2000; loop++) {
+			// Loop through configs doing division of coins into n players
+			for (Config config : configs) {
+				// Split chips between players randomly
+				List<List<Integer>> chips = splitChips(colours, config.players, quantities);
+
+				// For each player find min un-makable amount
+				int minMinUnmakable = 100000;
+				for (List<Integer> playersChips : chips) {
+					int minUnmakable = findMinUnmakable(colours, playersChips, config.denominations);
+					if (minUnmakable < minMinUnmakable) {
+						minMinUnmakable = minUnmakable;
+					}
 				}
-				if (isCancelled()) {
-					outputWords.add("...");
-					return StringUtils.join(outputWords, "\n");
+				if (!scoring.containsKey(config)) {
+					scoring.put(config, new ArrayList<Integer>());
 				}
-				word = wordFromBuffer(wordsBuffer);
+				scoring.get(config).add(minMinUnmakable);
 			}
-			updateProgress(outputWords, dictionary);
 		}
-		Collections.sort(outputWords);
-		if (outputWords.size() == MAX_WORDS) {
-			outputWords.add("...");
-		}
-		return StringUtils.join(outputWords, "\n");
-	}
 
-	/**
-	 * Return a word that should be stored as a single line in the buffer.
-	 * 
-	 * @param wordsBuffer
-	 * @return
-	 */
-	private String wordFromBuffer(BufferedReader wordsBuffer) {
-		String word = null;
-		try {
-			word = wordsBuffer.readLine();
-		} catch (IOException e) {
-			System.out.println(e);
+		// Pick best config
+		Config bestConfig = null;
+		double bestScore = 0;
+		for (Config config : configs) {
+			if (config.players == players) {
+				int total = 0;
+				for (int score : scoring.get(config)) {
+					total += score;
+				}
+				double average = ((double) total) / scoring.size();
+				if (average > bestScore) {
+					bestScore = average;
+					bestConfig = config;
+				}
+			}
 		}
-		return word;
-	}
 
-	/**
-	 * If a word matches the pattern then return it.
-	 * 
-	 * @param word The word to test.
-	 * @param pattern The compiled regex.
-	 * @return Either the word, or null if it doesn't match.
-	 */
-	private String matchWord(String word, Pattern pattern) {
-		Matcher matcher = pattern.matcher(word);
-		if (matcher.find()) {
-			return word;
+		// Determine how much cash each player gets for each phase.
+		int baseMultiple = bestConfig.baseMultiple;
+		List<Integer> denominations = bestConfig.denominations;
+		List<Integer> cashPerPlayerOfGivenColour = new ArrayList<Integer>();
+		int maxCashPerPlayer = 0;
+		for (int i = 0; i < colours; i++) {
+			cashPerPlayerOfGivenColour.add(denominations.get(i)
+			    * chipsPerPlayerOfGivenColour(quantities, players, i) * baseMultiple);
+			maxCashPerPlayer += cashPerPlayerOfGivenColour.get(i);
 		}
-		return null;
+		int startCash = 0;
+		int rebuyCash = 0;
+		for (int preferredChipCount : PREFERRED_INITIAL_PLAYER_CHIP_COUNT) {
+			if (preferredChipCount * baseMultiple < maxCashPerPlayer) {
+				startCash = (START_CHIPS_RATIO * preferredChipCount * baseMultiple)
+				    / (START_CHIPS_RATIO + REBUY_CHIPS_RATIO);
+				rebuyCash = (REBUY_CHIPS_RATIO * preferredChipCount * baseMultiple)
+				    / (START_CHIPS_RATIO + REBUY_CHIPS_RATIO);
+				break;
+			}
+		}
+
+		// Work out which chips to use to make all the cash from (start +
+		// rebuy).
+		List<Integer> totalCashPerPlayer = computeCashPerPlayer(colours, baseMultiple, denominations,
+		                                                        cashPerPlayerOfGivenColour, startCash
+		                                                            + rebuyCash);
+		List<Integer> totalChipsPerPlayer = findNumberOfChipsFromCash(colours, baseMultiple, denominations,
+		                                                              totalCashPerPlayer);
+
+		// Split out the start chips
+		List<Integer> startCashPerPlayer = computeCashPerPlayer(colours, baseMultiple, denominations,
+		                                                        totalCashPerPlayer, startCash);
+		List<Integer> startChipsPerPlayer = findNumberOfChipsFromCash(colours, baseMultiple, denominations,
+		                                                              startCashPerPlayer);
+
+		// Find rebuy chips
+		List<Integer> rebuyChipsPerPlayer = new ArrayList<Integer>();
+		for (int colour = 0; colour < colours; colour++) {
+			rebuyChipsPerPlayer.add(totalChipsPerPlayer.get(colour) - startChipsPerPlayer.get(colour));
+		}
+
+		List<Integer> cashDenominations = new ArrayList<Integer>();
+		for (int d : denominations) {
+			cashDenominations.add(d * baseMultiple);
+		}
+
+		// OUTPUT
+
+		List<String> outputLines = new ArrayList<String>();
+
+		outputLines.add("Tournament: T" + baseMultiple);
+		outputLines.add("Denominations: " + cashDenominations);
+		outputLines.add("Player Cash: " + (startCash + rebuyCash) + " [Start: " + startCash + ", Rebuy: "
+		    + rebuyCash + "]");
+		outputLines.add("Start chips: " + startChipsPerPlayer);
+		outputLines.add("Rebuy chips: " + rebuyChipsPerPlayer);
+
+		return StringUtils.join(outputLines, "\n");
 	}
 
 	/**
@@ -123,7 +322,9 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 	 * @param dictionary The dictionary currently being checked.
 	 */
 	private void updateProgress(List<String> outputWords, String dictionary) {
-		onProgressUpdate(outputWords.size(), dictionaries.indexOf(dictionary), dictionaries.size());
+		// TODO See if we can do any progress.
+		// onProgressUpdate(outputWords.size(),
+		// dictionaries.indexOf(dictionary), dictionaries.size());
 	}
 
 	/**
@@ -136,14 +337,15 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 	 */
 	@Override
 	protected void onProgressUpdate(Integer... values) {
-		int words = values[0];
-		int files = values[1];
-		int totalFiles = values[2];
-
-		int max = progressBarWrapper.getMax();
-
-		int progress = Math.max(max * words / MAX_WORDS, max * files / totalFiles);
-		progressBarWrapper.setProgress(progress);
+		// int words = values[0];
+		// int files = values[1];
+		// int totalFiles = values[2];
+		//
+		// int max = progressBarWrapper.getMax();
+		//
+		// int progress = Math.max(max * words / MAX_WORDS, max * files /
+		// totalFiles);
+		// progressBarWrapper.setProgress(progress);
 	}
 
 	/** Display the results and hide the progress bar again. */

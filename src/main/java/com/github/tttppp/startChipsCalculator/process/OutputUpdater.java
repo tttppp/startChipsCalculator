@@ -1,5 +1,6 @@
 package com.github.tttppp.startChipsCalculator.process;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -41,7 +42,16 @@ public class OutputUpdater {
 		Pattern pattern = Pattern.compile("([0-9]+) ([0-9]+)([0-9]+( [0-9]+)*)");
 		Matcher matcher = pattern.matcher(inputString);
 		if (matcher.find()) {
-			inputParameters = new InputParameters(Integer.valueOf(string), colours, quantities))
+			List<String> quantitiesStrings = Arrays.asList(matcher.group(3).split(" "));
+			List<Integer> quantities = new ArrayList<Integer>();
+			for (String quantitiesString : quantitiesStrings) {
+				quantities.add(Integer.valueOf(quantitiesString));
+			}
+			int colours = Integer.valueOf(matcher.group(2));
+			for (int i = quantities.size(); i < colours; i++) {
+				quantities.add(quantities.get(quantities.size() - 1));
+			}
+			inputParameters = new InputParameters(Integer.valueOf(matcher.group(1)), colours, quantities);
 			update();
 		} else {
 			// The user is probably editing their input
