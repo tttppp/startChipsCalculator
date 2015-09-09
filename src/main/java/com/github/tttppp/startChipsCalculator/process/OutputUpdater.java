@@ -39,7 +39,7 @@ public class OutputUpdater {
 		if (inputString == "") {
 			// Do nothing;
 		}
-		Pattern pattern = Pattern.compile("([0-9]+) ([0-9]+)([0-9]+( [0-9]+)*)");
+		Pattern pattern = Pattern.compile("([0-9]+) ([0-9]+) ([0-9]+( [0-9]+)*)");
 		Matcher matcher = pattern.matcher(inputString);
 		if (matcher.find()) {
 			List<String> quantitiesStrings = Arrays.asList(matcher.group(3).split(" "));

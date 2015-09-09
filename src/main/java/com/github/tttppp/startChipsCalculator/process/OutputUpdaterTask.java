@@ -2,6 +2,7 @@ package com.github.tttppp.startChipsCalculator.process;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,7 @@ import com.github.tttppp.startChipsCalculator.ui.OutputTextViewWrapper;
 import com.github.tttppp.startChipsCalculator.ui.ProgressBarWrapper;
 
 public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, String> {
+	private static final int NUMBER_LOOPS = 2000;
 	private static final int PRNG_SEED = 1234;
 	// Probably not for changing
 	private static final int START_CHIPS_RATIO = 3;
@@ -129,6 +131,7 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 				splitPoints.add(random.nextInt(quantities.get(c)));
 			}
 			splitPoints.add(quantities.get(c));
+			Collections.sort(splitPoints);
 			splitPointsList.add(splitPoints);
 		}
 		List<List<Integer>> split = new ArrayList<List<Integer>>();
@@ -198,10 +201,28 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 	@Override
 	protected String doInBackground(InputParameters... args) {
 		InputParameters inputParameters = args[0];
+		if (inputParameters == null) {
+			return "Please enter some parameters";
+		}
 
 		int players = inputParameters.getPlayers();
 		int colours = inputParameters.getColours();
 		List<Integer> quantities = inputParameters.getQuantities();
+
+		if (players < 2) {
+			return "The number of players must be at least 2";
+		}
+		if (players < 1) {
+			return "There must be at least one colour of chip";
+		}
+		if (quantities.size() != colours) {
+			return "Please enter the right number of quantities";
+		}
+		for (int quantity : quantities) {
+			if (quantity <= 0) {
+				return "Quantities must be at least 0: " + quantities;
+			}
+		}
 
 		// Ensure the same seed is used each time.
 		random = new Random(PRNG_SEED);
@@ -216,7 +237,7 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 
 		Map<Config, List<Integer>> scoring = new HashMap<Config, List<Integer>>();
 
-		for (int loop = 0; loop < 2000; loop++) {
+		for (int loop = 0; loop < NUMBER_LOOPS; loop++) {
 			// Loop through configs doing division of coins into n players
 			for (Config config : configs) {
 				// Split chips between players randomly
@@ -226,6 +247,10 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 				int minMinUnmakable = 100000;
 				for (List<Integer> playersChips : chips) {
 					int minUnmakable = findMinUnmakable(colours, playersChips, config.denominations);
+					if (minUnmakable < 0) {
+						return "Error: minUnmakable should not be less than 0: " + playersChips + "\n"
+						    + config.denominations;
+					}
 					if (minUnmakable < minMinUnmakable) {
 						minMinUnmakable = minUnmakable;
 					}
@@ -235,6 +260,7 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 				}
 				scoring.get(config).add(minMinUnmakable);
 			}
+			updateProgress(loop);
 		}
 
 		// Pick best config
@@ -252,6 +278,9 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 					bestConfig = config;
 				}
 			}
+		}
+		if (bestConfig == null) {
+			return "Error: No config was best.\n" + scoring.get(configs.get(0));
 		}
 
 		// Determine how much cash each player gets for each phase.
@@ -305,7 +334,7 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 
 		List<String> outputLines = new ArrayList<String>();
 
-		outputLines.add("Tournament: T" + baseMultiple);
+		outputLines.add("Tournament: T" + ((startCash + rebuyCash) / baseMultiple));
 		outputLines.add("Denominations: " + cashDenominations);
 		outputLines.add("Player Cash: " + (startCash + rebuyCash) + " [Start: " + startCash + ", Rebuy: "
 		    + rebuyCash + "]");
@@ -317,35 +346,21 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 
 	/**
 	 * Helper method to update the amount of progress.
-	 * 
-	 * @param outputWords The list of words found.
-	 * @param dictionary The dictionary currently being checked.
 	 */
-	private void updateProgress(List<String> outputWords, String dictionary) {
-		// TODO See if we can do any progress.
-		// onProgressUpdate(outputWords.size(),
-		// dictionaries.indexOf(dictionary), dictionaries.size());
+	private void updateProgress(int loopsDone) {
+		onProgressUpdate(loopsDone);
 	}
 
 	/**
 	 * {@inheritDoc} Update the progress bar to show roughly how much of the
 	 * task is done.
-	 * 
-	 * @param values Three int values must be supplied - the number of words
-	 *        found so far, the number of files checked so far, and the total
-	 *        number of files to check.
 	 */
 	@Override
 	protected void onProgressUpdate(Integer... values) {
-		// int words = values[0];
-		// int files = values[1];
-		// int totalFiles = values[2];
-		//
-		// int max = progressBarWrapper.getMax();
-		//
-		// int progress = Math.max(max * words / MAX_WORDS, max * files /
-		// totalFiles);
-		// progressBarWrapper.setProgress(progress);
+		int loopsDone = values[0];
+		int max = progressBarWrapper.getMax();
+		int progress = max * loopsDone / NUMBER_LOOPS;
+		progressBarWrapper.setProgress(progress);
 	}
 
 	/** Display the results and hide the progress bar again. */
