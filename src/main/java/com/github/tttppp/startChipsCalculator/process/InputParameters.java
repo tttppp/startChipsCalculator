@@ -36,4 +36,19 @@ public class InputParameters {
 	public void setQuantities(List<Integer> quantities) {
 		this.quantities = quantities;
 	}
+
+	@Override
+	public boolean equals(Object other) {
+		if (!(other instanceof InputParameters)) {
+			return false;
+		}
+		InputParameters otherIP = (InputParameters) other;
+		return (otherIP.colours == colours && otherIP.players == players && otherIP.quantities
+		    .equals(quantities));
+	}
+
+	@Override
+	public int hashCode() {
+		return colours + players * 31 + quantities.hashCode() * 31 * 31;
+	}
 }

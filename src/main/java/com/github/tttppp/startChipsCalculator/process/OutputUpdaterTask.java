@@ -343,6 +343,9 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 					scoring.get(config).add(minMinUnmakable);
 				}
 				updateProgress(loop);
+				if (isCancelled()) {
+					return "";
+				}
 			}
 
 			// Pick best config
