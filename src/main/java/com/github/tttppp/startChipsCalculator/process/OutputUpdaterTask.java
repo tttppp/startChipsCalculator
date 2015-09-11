@@ -125,12 +125,16 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 	private List<List<Integer>> splitChips(int colours, int players, List<Integer> quantities) {
 		List<List<Integer>> splitPointsList = new ArrayList<List<Integer>>();
 		for (int c = 0; c < colours; c++) {
+			// Determine how many of this chip can be distributed evenly between
+			// the players.
+			Integer quantityForPlayers = quantities.get(c) - (quantities.get(c) % players);
+
 			List<Integer> splitPoints = new ArrayList<Integer>();
 			splitPoints.add(0);
 			for (int p = 0; p < players; p++) {
-				splitPoints.add(random.nextInt(quantities.get(c)));
+				splitPoints.add(random.nextInt(quantityForPlayers));
 			}
-			splitPoints.add(quantities.get(c));
+			splitPoints.add(quantityForPlayers);
 			Collections.sort(splitPoints);
 			splitPointsList.add(splitPoints);
 		}

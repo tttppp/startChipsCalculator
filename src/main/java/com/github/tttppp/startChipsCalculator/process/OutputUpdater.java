@@ -71,7 +71,7 @@ public class OutputUpdater {
 		outputUpdaterTaskRunner.createAndExecute(progressBarWrapper, output, dictionaries, inputParameters);
 	}
 
-	public void setOutputUpdaterTaskFactory(OutputUpdaterTaskRunner outputUpdaterTaskFactory) {
-		this.outputUpdaterTaskRunner = outputUpdaterTaskFactory;
+	public void setOutputUpdaterTaskFactory(OutputUpdaterTaskRunner outputUpdaterTaskRunner) {
+		this.outputUpdaterTaskRunner = outputUpdaterTaskRunner;
 	}
 }
