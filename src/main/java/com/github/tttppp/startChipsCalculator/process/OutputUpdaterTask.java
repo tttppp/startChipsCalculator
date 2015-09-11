@@ -177,23 +177,25 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 		return returnList;
 	}
 
-	private List<List<Integer>> splitChips(int colours, int players, List<Integer> quantities) {
+	private List<List<Integer>> splitChips(int colours, int players, List<Integer> quantitiesPerPlayer) {
 		List<List<Integer>> splitPointsList = new ArrayList<List<Integer>>();
 		for (int c = 0; c < colours; c++) {
-			// Determine how many of this chip can be distributed evenly between
-			// the players.
-			Integer quantityForPlayers = quantities.get(c) - (quantities.get(c) % players);
+			// Determine how many total of this chip.
+			Integer quantity = quantitiesPerPlayer.get(c) * players;
 
 			List<Integer> splitPoints = new ArrayList<Integer>();
 			splitPoints.add(0);
 			for (int p = 0; p < players; p++) {
-				if (quantityForPlayers <= 0) {
+				if (quantity == 0) {
 					splitPoints.add(0);
+				} else if (quantity > 0) {
+					splitPoints.add(random.nextInt(quantity));
 				} else {
-					splitPoints.add(random.nextInt(quantityForPlayers));
+					// Error
+					return null;
 				}
 			}
-			splitPoints.add(quantityForPlayers);
+			splitPoints.add(quantity);
 			Collections.sort(splitPoints);
 			splitPointsList.add(splitPoints);
 		}
@@ -295,7 +297,13 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 
 		List<Config> configs = new ArrayList<Config>();
 		for (List<Integer> denominations : denominationList) {
-			configs.add(new Config(players, denominations, baseMultipleMap.get(denominations), quantities));
+			Config config = new Config(players, denominations, baseMultipleMap.get(denominations), quantities);
+			// If there are no initial small blinds then this isn't a valid
+			// combination.
+			if (config.startChipsPerPlayer != null && config.startChipsPerPlayer.size() > 0
+			    && config.startChipsPerPlayer.get(0) > 0) {
+				configs.add(config);
+			}
 		}
 
 		Map<Config, List<Integer>> scoring = new HashMap<Config, List<Integer>>();
@@ -306,6 +314,10 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 				// Split start chips between players randomly (we need
 				// tournament to work before rebuy chips appear).
 				List<List<Integer>> chips = splitChips(colours, config.players, config.startChipsPerPlayer);
+				if (chips == null) {
+					// Invalid chip calculation.
+					continue;
+				}
 
 				// For each player find min un-makable amount
 				int minMinUnmakable = 100000;
@@ -333,18 +345,20 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 		for (Config config : configs) {
 			if (config.players == players) {
 				int total = 0;
-				for (int score : scoring.get(config)) {
-					total += score;
-				}
-				double average = ((double) total) / scoring.size();
-				if (average > bestScore) {
-					bestScore = average;
-					bestConfig = config;
+				if (scoring.get(config) != null) {
+					for (int score : scoring.get(config)) {
+						total += score;
+					}
+					double average = ((double) total) / scoring.size();
+					if (average > bestScore) {
+						bestScore = average;
+						bestConfig = config;
+					}
 				}
 			}
 		}
 		if (bestConfig == null) {
-			return "Error: No config was best.\n" + scoring.get(configs.get(0));
+			return "Error: No config was best.";
 		}
 
 		// OUTPUT
