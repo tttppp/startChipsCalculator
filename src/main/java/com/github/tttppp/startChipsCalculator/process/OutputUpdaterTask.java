@@ -29,6 +29,8 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 	private static final List<Integer> VALID_CHIP_BASES = Arrays.asList(1, 2, 5, 25);
 	private static final List<Integer> INCREMENTS = Arrays.asList(2, 4, 5, 10);
 
+	private static final Map<InputParameters, Config> CACHED_BEST_CONFIGS = new HashMap<InputParameters, Config>();
+
 	/** Seeded random number generator. */
 	private Random random;
 	/** Why is this a field? */
@@ -289,73 +291,80 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 			}
 		}
 
-		// Ensure the same seed is used each time.
-		random = new Random(PRNG_SEED);
-
-		// Create configs
-		List<List<Integer>> denominationList = makeDenominationsList(colours, 1, Arrays.asList(1));
-
-		List<Config> configs = new ArrayList<Config>();
-		for (List<Integer> denominations : denominationList) {
-			Config config = new Config(players, denominations, baseMultipleMap.get(denominations), quantities);
-			// If there are no initial small blinds then this isn't a valid
-			// combination.
-			if (config.startChipsPerPlayer != null && config.startChipsPerPlayer.size() > 0
-			    && config.startChipsPerPlayer.get(0) > 0) {
-				configs.add(config);
-			}
-		}
-
-		Map<Config, List<Integer>> scoring = new HashMap<Config, List<Integer>>();
-
-		for (int loop = 0; loop < NUMBER_LOOPS; loop++) {
-			// Loop through configs doing division of coins into n players
-			for (Config config : configs) {
-				// Split start chips between players randomly (we need
-				// tournament to work before rebuy chips appear).
-				List<List<Integer>> chips = splitChips(colours, config.players, config.startChipsPerPlayer);
-				if (chips == null) {
-					// Invalid chip calculation.
-					continue;
-				}
-
-				// For each player find min un-makable amount
-				int minMinUnmakable = 100000;
-				for (List<Integer> playersChips : chips) {
-					int minUnmakable = findMinUnmakable(colours, playersChips, config.denominations);
-					if (minUnmakable < 0) {
-						return "Error: minUnmakable should not be less than 0: " + playersChips + "\n"
-						    + config.denominations;
-					}
-					if (minUnmakable < minMinUnmakable) {
-						minMinUnmakable = minUnmakable;
-					}
-				}
-				if (!scoring.containsKey(config)) {
-					scoring.put(config, new ArrayList<Integer>());
-				}
-				scoring.get(config).add(minMinUnmakable);
-			}
-			updateProgress(loop);
-		}
-
-		// Pick best config
 		Config bestConfig = null;
-		double bestScore = 0;
-		for (Config config : configs) {
-			if (config.players == players) {
-				int total = 0;
-				if (scoring.get(config) != null) {
-					for (int score : scoring.get(config)) {
-						total += score;
+		if (!CACHED_BEST_CONFIGS.containsKey(inputParameters)) {
+			// Ensure the same seed is used each time.
+			random = new Random(PRNG_SEED);
+
+			// Create configs
+			List<List<Integer>> denominationList = makeDenominationsList(colours, 1, Arrays.asList(1));
+
+			List<Config> configs = new ArrayList<Config>();
+			for (List<Integer> denominations : denominationList) {
+				Config config = new Config(players, denominations, baseMultipleMap.get(denominations),
+				                           quantities);
+				// If there are no initial small blinds then this isn't a valid
+				// combination.
+				if (config.startChipsPerPlayer != null && config.startChipsPerPlayer.size() > 0
+				    && config.startChipsPerPlayer.get(0) > 0) {
+					configs.add(config);
+				}
+			}
+
+			Map<Config, List<Integer>> scoring = new HashMap<Config, List<Integer>>();
+
+			for (int loop = 0; loop < NUMBER_LOOPS; loop++) {
+				// Loop through configs doing division of coins into n players
+				for (Config config : configs) {
+					// Split start chips between players randomly (we need
+					// tournament to work before rebuy chips appear).
+					List<List<Integer>> chips = splitChips(colours, config.players,
+					                                       config.startChipsPerPlayer);
+					if (chips == null) {
+						// Invalid chip calculation.
+						continue;
 					}
-					double average = ((double) total) / scoring.size();
-					if (average > bestScore) {
-						bestScore = average;
-						bestConfig = config;
+
+					// For each player find min un-makable amount
+					int minMinUnmakable = 100000;
+					for (List<Integer> playersChips : chips) {
+						int minUnmakable = findMinUnmakable(colours, playersChips, config.denominations);
+						if (minUnmakable < 0) {
+							return "Error: minUnmakable should not be less than 0: " + playersChips + "\n"
+							    + config.denominations;
+						}
+						if (minUnmakable < minMinUnmakable) {
+							minMinUnmakable = minUnmakable;
+						}
+					}
+					if (!scoring.containsKey(config)) {
+						scoring.put(config, new ArrayList<Integer>());
+					}
+					scoring.get(config).add(minMinUnmakable);
+				}
+				updateProgress(loop);
+			}
+
+			// Pick best config
+			double bestScore = 0;
+			for (Config config : configs) {
+				if (config.players == players) {
+					int total = 0;
+					if (scoring.get(config) != null) {
+						for (int score : scoring.get(config)) {
+							total += score;
+						}
+						double average = ((double) total) / scoring.size();
+						if (average > bestScore) {
+							bestScore = average;
+							bestConfig = config;
+						}
 					}
 				}
 			}
+			CACHED_BEST_CONFIGS.put(inputParameters, bestConfig);
+		} else {
+			bestConfig = CACHED_BEST_CONFIGS.get(inputParameters);
 		}
 		if (bestConfig == null) {
 			return "Error: No config was best.";
