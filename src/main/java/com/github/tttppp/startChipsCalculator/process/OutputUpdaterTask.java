@@ -60,11 +60,66 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 		public int players;
 		public List<Integer> denominations;
 		public int baseMultiple;
+		public int totalCash;
+		public int startCash;
+		public int rebuyCash;
+		public List<Integer> startChipsPerPlayer;
+		public List<Integer> rebuyChipsPerPlayer;
+		public List<Integer> cashDenominations;
 
-		public Config(int players, List<Integer> denominations, int baseMultiple) {
+		public Config(int players, List<Integer> denominations, int baseMultiple, List<Integer> quantities) {
 			this.players = players;
 			this.denominations = denominations;
 			this.baseMultiple = baseMultiple;
+
+			determineCashAndQuantities(quantities);
+		}
+
+		private void determineCashAndQuantities(List<Integer> quantities) {
+			// Determine how much cash each player gets for each phase.
+			int colours = denominations.size();
+			List<Integer> cashPerPlayerOfGivenColour = new ArrayList<Integer>();
+			int maxCashPerPlayer = 0;
+			for (int i = 0; i < colours; i++) {
+				cashPerPlayerOfGivenColour.add(denominations.get(i)
+				    * chipsPerPlayerOfGivenColour(quantities, players, i) * baseMultiple);
+				maxCashPerPlayer += cashPerPlayerOfGivenColour.get(i);
+			}
+			startCash = 0;
+			rebuyCash = 0;
+			for (int preferredChipCount : PREFERRED_INITIAL_PLAYER_CHIP_COUNT) {
+				totalCash = preferredChipCount * baseMultiple;
+				if (totalCash < maxCashPerPlayer) {
+					startCash = (START_CHIPS_RATIO * totalCash) / (START_CHIPS_RATIO + REBUY_CHIPS_RATIO);
+					rebuyCash = (REBUY_CHIPS_RATIO * totalCash) / (START_CHIPS_RATIO + REBUY_CHIPS_RATIO);
+					break;
+				}
+			}
+
+			// Work out which chips to use to make all the cash from (start +
+			// rebuy).
+			List<Integer> totalCashPerPlayer = computeCashPerPlayer(colours, baseMultiple, denominations,
+			                                                        cashPerPlayerOfGivenColour, startCash
+			                                                            + rebuyCash);
+			List<Integer> totalChipsPerPlayer = findNumberOfChipsFromCash(colours, baseMultiple,
+			                                                              denominations, totalCashPerPlayer);
+
+			// Split out the start chips
+			List<Integer> startCashPerPlayer = computeCashPerPlayer(colours, baseMultiple, denominations,
+			                                                        totalCashPerPlayer, startCash);
+			startChipsPerPlayer = findNumberOfChipsFromCash(colours, baseMultiple, denominations,
+			                                                startCashPerPlayer);
+
+			// Find rebuy chips
+			rebuyChipsPerPlayer = new ArrayList<Integer>();
+			for (int colour = 0; colour < colours; colour++) {
+				rebuyChipsPerPlayer.add(totalChipsPerPlayer.get(colour) - startChipsPerPlayer.get(colour));
+			}
+
+			cashDenominations = new ArrayList<Integer>();
+			for (int d : denominations) {
+				cashDenominations.add(d * baseMultiple);
+			}
 		}
 
 		@Override
@@ -132,7 +187,11 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 			List<Integer> splitPoints = new ArrayList<Integer>();
 			splitPoints.add(0);
 			for (int p = 0; p < players; p++) {
-				splitPoints.add(random.nextInt(quantityForPlayers));
+				if (quantityForPlayers <= 0) {
+					splitPoints.add(0);
+				} else {
+					splitPoints.add(random.nextInt(quantityForPlayers));
+				}
 			}
 			splitPoints.add(quantityForPlayers);
 			Collections.sort(splitPoints);
@@ -236,7 +295,7 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 
 		List<Config> configs = new ArrayList<Config>();
 		for (List<Integer> denominations : denominationList) {
-			configs.add(new Config(players, denominations, baseMultipleMap.get(denominations)));
+			configs.add(new Config(players, denominations, baseMultipleMap.get(denominations), quantities));
 		}
 
 		Map<Config, List<Integer>> scoring = new HashMap<Config, List<Integer>>();
@@ -244,8 +303,9 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 		for (int loop = 0; loop < NUMBER_LOOPS; loop++) {
 			// Loop through configs doing division of coins into n players
 			for (Config config : configs) {
-				// Split chips between players randomly
-				List<List<Integer>> chips = splitChips(colours, config.players, quantities);
+				// Split start chips between players randomly (we need
+				// tournament to work before rebuy chips appear).
+				List<List<Integer>> chips = splitChips(colours, config.players, config.startChipsPerPlayer);
 
 				// For each player find min un-makable amount
 				int minMinUnmakable = 100000;
@@ -287,63 +347,16 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 			return "Error: No config was best.\n" + scoring.get(configs.get(0));
 		}
 
-		// Determine how much cash each player gets for each phase.
-		int baseMultiple = bestConfig.baseMultiple;
-		List<Integer> denominations = bestConfig.denominations;
-		List<Integer> cashPerPlayerOfGivenColour = new ArrayList<Integer>();
-		int maxCashPerPlayer = 0;
-		for (int i = 0; i < colours; i++) {
-			cashPerPlayerOfGivenColour.add(denominations.get(i)
-			    * chipsPerPlayerOfGivenColour(quantities, players, i) * baseMultiple);
-			maxCashPerPlayer += cashPerPlayerOfGivenColour.get(i);
-		}
-		int startCash = 0;
-		int rebuyCash = 0;
-		for (int preferredChipCount : PREFERRED_INITIAL_PLAYER_CHIP_COUNT) {
-			if (preferredChipCount * baseMultiple < maxCashPerPlayer) {
-				startCash = (START_CHIPS_RATIO * preferredChipCount * baseMultiple)
-				    / (START_CHIPS_RATIO + REBUY_CHIPS_RATIO);
-				rebuyCash = (REBUY_CHIPS_RATIO * preferredChipCount * baseMultiple)
-				    / (START_CHIPS_RATIO + REBUY_CHIPS_RATIO);
-				break;
-			}
-		}
-
-		// Work out which chips to use to make all the cash from (start +
-		// rebuy).
-		List<Integer> totalCashPerPlayer = computeCashPerPlayer(colours, baseMultiple, denominations,
-		                                                        cashPerPlayerOfGivenColour, startCash
-		                                                            + rebuyCash);
-		List<Integer> totalChipsPerPlayer = findNumberOfChipsFromCash(colours, baseMultiple, denominations,
-		                                                              totalCashPerPlayer);
-
-		// Split out the start chips
-		List<Integer> startCashPerPlayer = computeCashPerPlayer(colours, baseMultiple, denominations,
-		                                                        totalCashPerPlayer, startCash);
-		List<Integer> startChipsPerPlayer = findNumberOfChipsFromCash(colours, baseMultiple, denominations,
-		                                                              startCashPerPlayer);
-
-		// Find rebuy chips
-		List<Integer> rebuyChipsPerPlayer = new ArrayList<Integer>();
-		for (int colour = 0; colour < colours; colour++) {
-			rebuyChipsPerPlayer.add(totalChipsPerPlayer.get(colour) - startChipsPerPlayer.get(colour));
-		}
-
-		List<Integer> cashDenominations = new ArrayList<Integer>();
-		for (int d : denominations) {
-			cashDenominations.add(d * baseMultiple);
-		}
-
 		// OUTPUT
 
 		List<String> outputLines = new ArrayList<String>();
 
-		outputLines.add("Tournament: T" + ((startCash + rebuyCash) / baseMultiple));
-		outputLines.add("Denominations: " + cashDenominations);
-		outputLines.add("Player Cash: " + (startCash + rebuyCash) + " [Start: " + startCash + ", Rebuy: "
-		    + rebuyCash + "]");
-		outputLines.add("Start chips: " + startChipsPerPlayer);
-		outputLines.add("Rebuy chips: " + rebuyChipsPerPlayer);
+		outputLines.add("Tournament ratio: " + (bestConfig.totalCash / bestConfig.baseMultiple));
+		outputLines.add("Denominations: " + bestConfig.cashDenominations);
+		outputLines.add("Player Cash: " + (bestConfig.totalCash) + " [Start: " + bestConfig.startCash
+		    + ", Rebuy: " + bestConfig.rebuyCash + "]");
+		outputLines.add("Start chips: " + bestConfig.startChipsPerPlayer);
+		outputLines.add("Rebuy chips: " + bestConfig.rebuyChipsPerPlayer);
 
 		return StringUtils.join(outputLines, "\n");
 	}
