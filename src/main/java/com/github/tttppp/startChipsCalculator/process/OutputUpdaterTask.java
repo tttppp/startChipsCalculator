@@ -22,8 +22,8 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 	// Probably not for changing
 	private static final int START_CHIPS_RATIO = 3;
 	private static final int REBUY_CHIPS_RATIO = 1;
-	private static final List<Integer> PREFERRED_INITIAL_PLAYER_CHIP_COUNT = Arrays.asList(1000, 500, 200,
-	                                                                                       100, 20, 4);
+	private static final List<Integer> PREFERRED_INITIAL_PLAYER_CHIP_COUNT = Arrays.asList(100, 80, 40, 20,
+	                                                                                       16, 12, 8, 4);
 
 	// Not for changing
 	private static final List<Integer> VALID_CHIP_BASES = Arrays.asList(1, 2, 5, 25);
