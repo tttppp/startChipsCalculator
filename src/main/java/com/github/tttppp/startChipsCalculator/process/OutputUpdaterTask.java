@@ -354,7 +354,10 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 				if (config.players == players) {
 					int total = 0;
 					if (scoring.get(config) != null) {
-						for (int score : scoring.get(config)) {
+						// Ignore the top and bottom tenth percentile.
+						int start = scoring.get(config).size() / 10;
+						int end = scoring.get(config).size() - start;
+						for (int score : scoring.get(config).subList(start, end)) {
 							total += score;
 						}
 						double average = ((double) total) / scoring.size();
