@@ -2,11 +2,9 @@ package com.github.tttppp.startChipsCalculator.process;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -18,24 +16,16 @@ import com.github.tttppp.startChipsCalculator.ui.ProgressBarWrapper;
 
 public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, String> {
 	private static final int NUMBER_LOOPS = 2000;
-	private static final int PRNG_SEED = 1234;
 	// Probably not for changing
 	private static final int START_CHIPS_RATIO = 3;
 	private static final int REBUY_CHIPS_RATIO = 1;
 	private static final List<Integer> PREFERRED_INITIAL_PLAYER_CHIP_COUNT = Arrays.asList(100, 80, 40, 20,
 	                                                                                       16, 12, 8, 4);
 
-	// Not for changing
-	private static final List<Integer> VALID_CHIP_BASES = Arrays.asList(1, 2, 5, 25);
-	private static final List<Integer> INCREMENTS = Arrays.asList(2, 4, 5, 10);
-
 	private static final Map<InputParameters, Config> CACHED_BEST_CONFIGS = new HashMap<InputParameters, Config>();
 
-	/** Seeded random number generator. */
-	private Random random;
-	/** Why is this a field? */
-	private Map<List<Integer>, Integer> baseMultipleMap = new HashMap<List<Integer>, Integer>();
-
+	/** The object responsible for the heavy lifting. */
+	private ChipsCalculator chipsCalculator = new ChipsCalculator();
 	/** The progress bar to update periodically. */
 	private ProgressBarWrapper progressBarWrapper;
 	/** The wrapper for the output UI field. */
@@ -134,84 +124,6 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 		}
 	}
 
-	private boolean isOk(List<Integer> denominations) {
-		for (int d : denominations) {
-			while (d % 10 == 0) {
-				d = d / 10;
-			}
-			if (!VALID_CHIP_BASES.contains(d)) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	private boolean useableByHumans(List<Integer> denominations) {
-		for (int multiplier : VALID_CHIP_BASES) {
-			List<Integer> cashDenominations = new ArrayList<Integer>();
-			for (int d : denominations) {
-				cashDenominations.add(d * multiplier);
-			}
-			if (isOk(cashDenominations)) {
-				baseMultipleMap.put(denominations, multiplier);
-				return true;
-			}
-		}
-		return false;
-	}
-
-	@SuppressWarnings("unchecked")
-	private List<List<Integer>> makeDenominationsList(int colours, int current, List<Integer> partialList) {
-		if (partialList.size() == colours) {
-			// Check if the completed list is actually usable by humans
-			if (useableByHumans(partialList)) {
-				return Arrays.asList(partialList);
-			} else {
-				return new ArrayList<List<Integer>>();
-			}
-		}
-		List<List<Integer>> returnList = new ArrayList<List<Integer>>();
-		for (int i : INCREMENTS) {
-			List<Integer> newPartial = new ArrayList<Integer>(partialList);
-			newPartial.add(i * current);
-			returnList.addAll(makeDenominationsList(colours, i * current, newPartial));
-		}
-		return returnList;
-	}
-
-	private List<List<Integer>> splitChips(int colours, int players, List<Integer> quantitiesPerPlayer) {
-		List<List<Integer>> splitPointsList = new ArrayList<List<Integer>>();
-		for (int c = 0; c < colours; c++) {
-			// Determine how many total of this chip.
-			Integer quantity = quantitiesPerPlayer.get(c) * players;
-
-			List<Integer> splitPoints = new ArrayList<Integer>();
-			splitPoints.add(0);
-			for (int p = 0; p < players; p++) {
-				if (quantity == 0) {
-					splitPoints.add(0);
-				} else if (quantity > 0) {
-					splitPoints.add(random.nextInt(quantity));
-				} else {
-					// Error
-					return null;
-				}
-			}
-			splitPoints.add(quantity);
-			Collections.sort(splitPoints);
-			splitPointsList.add(splitPoints);
-		}
-		List<List<Integer>> split = new ArrayList<List<Integer>>();
-		for (int player = 0; player < players; player++) {
-			List<Integer> s = new ArrayList<Integer>();
-			for (int c = 0; c < colours; c++) {
-				s.add(splitPointsList.get(c).get(player + 1) - splitPointsList.get(c).get(player));
-			}
-			split.add(s);
-		}
-		return split;
-	}
-
 	private int findMinUnmakable(int colours, List<Integer> playersChips, List<Integer> denominations) {
 		int carry = 0;
 		for (int i = 0; i < colours - 1; i++) {
@@ -294,15 +206,16 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 		Config bestConfig = null;
 		if (!CACHED_BEST_CONFIGS.containsKey(inputParameters)) {
 			// Ensure the same seed is used each time.
-			random = new Random(PRNG_SEED);
+			chipsCalculator.reseedPRNG();
 
 			// Create configs
-			List<List<Integer>> denominationList = makeDenominationsList(colours, 1, Arrays.asList(1));
+			List<List<Integer>> denominationList = chipsCalculator.makeDenominationsList(colours, 1,
+			                                                                             Arrays.asList(1));
 
 			List<Config> configs = new ArrayList<Config>();
 			for (List<Integer> denominations : denominationList) {
-				Config config = new Config(players, denominations, baseMultipleMap.get(denominations),
-				                           quantities);
+				Config config = new Config(players, denominations,
+				                           chipsCalculator.getBaseMultiple(denominations), quantities);
 				// If there are no initial small blinds then this isn't a valid
 				// combination.
 				if (config.startChipsPerPlayer != null && config.startChipsPerPlayer.size() > 0
@@ -318,8 +231,8 @@ public class OutputUpdaterTask extends AsyncTask<InputParameters, Integer, Strin
 				for (Config config : configs) {
 					// Split start chips between players randomly (we need
 					// tournament to work before rebuy chips appear).
-					List<List<Integer>> chips = splitChips(colours, config.players,
-					                                       config.startChipsPerPlayer);
+					List<List<Integer>> chips = chipsCalculator.splitChips(colours, config.players,
+					                                                       config.startChipsPerPlayer);
 					if (chips == null) {
 						// Invalid chip calculation.
 						continue;
