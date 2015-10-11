@@ -17,7 +17,8 @@ public class ChipsCalculatorTest {
 		List<List<Integer>> denominations = chipsCalculator.makeDenominationsList(2, 1,
 		                                                                          new ArrayList<Integer>());
 
-		List<List<Integer>> expected = Arrays.asList(Arrays.asList(10, 100), Arrays.asList(10, 20),
+		@SuppressWarnings("unchecked")
+        List<List<Integer>> expected = Arrays.asList(Arrays.asList(10, 100), Arrays.asList(10, 20),
 		                                             Arrays.asList(10, 25), Arrays.asList(10, 40),
 		                                             Arrays.asList(10, 50), Arrays.asList(2, 20),
 		                                             Arrays.asList(2, 4), Arrays.asList(2, 5),

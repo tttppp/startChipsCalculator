@@ -11,20 +11,34 @@
         android:text="@string/hello" />
 
     <EditText
-        android:id="@+id/inputEditText"
+        android:id="@+id/numberOfPlayers"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ems="10"
-        android:hint="@string/hint" >
-
+        android:hint="@string/numberOfPlayersHint"
+		android:inputType="number" >
         <requestFocus />
     </EditText>
-
-    <Spinner
-        android:id="@+id/dictionarySpinner"
+    
+    <EditText
+        android:id="@+id/numberOfColours"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:visibility="gone" />
+        android:ems="10"
+        android:hint="@string/numberOfColoursHint"
+        android:inputType="number" />
+
+    <TextView 
+        android:text="@string/quantityOfEachChip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
+    <LinearLayout
+        android:id="@+id/chipCountContainer"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
 
     <ProgressBar
         android:id="@+id/outputProgressBar"
@@ -44,4 +58,5 @@
 	        android:layout_width="fill_parent"
 	        android:layout_height="wrap_content" />
     </ScrollView>
+
 </LinearLayout>

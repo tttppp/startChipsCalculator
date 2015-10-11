@@ -3,15 +3,11 @@ package com.github.tttppp.startChipsCalculator.process;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.github.tttppp.startChipsCalculator.ui.OutputTextViewWrapper;
 import com.github.tttppp.startChipsCalculator.ui.ProgressBarWrapper;
 
 public class OutputUpdater {
-	/** A pattern to validate the input. */
-	private static final Pattern VALIDATION_PATTERN = Pattern.compile("^[0-9]+ [0-9]+( [0-9]+)+$");
 	/** The wrapper for the output UI field. */
 	private OutputTextViewWrapper output;
 	/** The object containing the input parameters. */
@@ -35,28 +31,39 @@ public class OutputUpdater {
 	 *        there are more colours than quantities then the remainder will be
 	 *        filled assumed to have the last quantity.
 	 */
-	public void inputChanged(String inputString) {
-		if (inputString == "") {
-			// Do nothing;
+	public void inputChanged(String numberOfPlayersString, String numberOfColoursString, List<String> quantitiesOfChipsStrings) {
+		int numberOfPlayers = 0;
+		try {
+			numberOfPlayers = Integer.valueOf(numberOfPlayersString.toString().trim());
+		} catch (NumberFormatException e) {
+			// TODO Error handling.
+			return;
 		}
-		Pattern pattern = Pattern.compile("^([0-9]+) ([0-9]+) ([0-9]+( [0-9]+)*)$");
-		Matcher matcher = pattern.matcher(inputString);
-		if (matcher.find()) {
-			List<String> quantitiesStrings = Arrays.asList(matcher.group(3).split(" "));
-			List<Integer> quantities = new ArrayList<Integer>();
-			for (String quantitiesString : quantitiesStrings) {
-				quantities.add(Integer.valueOf(quantitiesString));
-			}
-			int colours = Integer.valueOf(matcher.group(2));
-			for (int i = quantities.size(); i < colours; i++) {
-				quantities.add(quantities.get(quantities.size() - 1));
-			}
-			inputParameters = new InputParameters(Integer.valueOf(matcher.group(1)), colours, quantities);
-			update();
-		} else {
-			// The user is probably editing their input
-			output.setText("Please enter a string of the form \"players colours quantityOfColour...\"");
+		
+		int numberOfColours = 0;
+		try {
+			numberOfColours = Integer.valueOf(numberOfColoursString.toString().trim());
+		} catch (NumberFormatException e) {
+			// TODO Error handling.
+			return;
 		}
+		
+		List<Integer> quantitiesOfChips = new ArrayList<Integer>();
+		for (String quantityString : quantitiesOfChipsStrings) {
+			try {
+				quantitiesOfChips.add(Integer.valueOf(quantityString.toString().trim()));
+			} catch (NumberFormatException e) {
+				// TODO Error handling.
+				return;
+			}
+		}
+		while (quantitiesOfChips.size() < numberOfColours) {
+			quantitiesOfChips.add(quantitiesOfChips.get(quantitiesOfChips.size() - 1));
+		}
+
+		inputParameters = new InputParameters(numberOfPlayers, numberOfColours, quantitiesOfChips);
+		update();
+
 	}
 
 	public void dictionaryChanged(List<String> dictionaries) {

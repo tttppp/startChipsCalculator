@@ -2,18 +2,16 @@ package com.github.tttppp.startChipsCalculator;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.widget.AdapterView.OnItemSelectedListener;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.github.tttppp.startChipsCalculator.process.OutputUpdater;
-import com.github.tttppp.startChipsCalculator.ui.DictionaryListener;
+import com.github.tttppp.startChipsCalculator.ui.InputListener;
+import com.github.tttppp.startChipsCalculator.ui.NumberOfColoursChangedListener;
 import com.github.tttppp.startChipsCalculator.ui.OutputTextViewWrapper;
 import com.github.tttppp.startChipsCalculator.ui.ProgressBarWrapper;
-import com.github.tttppp.startChipsCalculator.ui.InputListener;
 
 public class StartChipsCalculatorActivity extends Activity {
 	/** Called when the activity is first created. */
@@ -30,27 +28,11 @@ public class StartChipsCalculatorActivity extends Activity {
 
 		OutputUpdater outputUpdater = new OutputUpdater(outputTextViewWrapper, progressBarWrapper);
 
-		EditText input = (EditText) findViewById(R.id.inputEditText);
-		input.addTextChangedListener(new InputListener(input, outputUpdater));
-
-		Spinner dictionarySpinner = (Spinner) findViewById(R.id.dictionarySpinner);
-		OnItemSelectedListener dictionaryListner = new DictionaryListener(outputUpdater);
-		dictionarySpinner.setOnItemSelectedListener(dictionaryListner);
-		String[] dictionaryArray = new String[10];
-		dictionaryArray[0] = "english-words.10.txt";
-		dictionaryArray[1] = "english-words.20.txt";
-		dictionaryArray[2] = "english-words.35.txt";
-		dictionaryArray[3] = "english-words.40.txt";
-		dictionaryArray[4] = "english-words.50.txt";
-		dictionaryArray[5] = "english-words.55.txt";
-		dictionaryArray[6] = "english-words.60.txt";
-		dictionaryArray[7] = "english-words.70.txt";
-		dictionaryArray[8] = "english-words.80.txt";
-		dictionaryArray[9] = "english-words.95.txt";
-		ArrayAdapter<String> dictionaryAdapter = new ArrayAdapter<String>(
-		                                                                  this,
-		                                                                  android.R.layout.simple_spinner_item,
-		                                                                  dictionaryArray);
-		dictionarySpinner.setAdapter(dictionaryAdapter);
+		EditText input = (EditText) findViewById(R.id.numberOfPlayers);
+		InputListener inputListener = new InputListener(this, outputUpdater);
+		input.addTextChangedListener(inputListener);
+		input = (EditText) findViewById(R.id.numberOfColours);
+		LinearLayout chipCountContainer = (LinearLayout) findViewById(R.id.chipCountContainer);
+		input.addTextChangedListener(new NumberOfColoursChangedListener(input, inputListener, chipCountContainer));
 	}
 }

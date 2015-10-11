@@ -3,6 +3,8 @@
 
     <string name="hello">Please enter the number of players, colours and quantities</string>
     <string name="app_name">Chip Calculator</string>
-    <string name="hint">Players Colours Quantities...</string>
+    <string name="numberOfPlayersHint">Number of players</string>
+    <string name="numberOfColoursHint">Number of colours</string>
+    <string name="quantityOfEachChip">Quantity of each colour of chip:</string>
 
 </resources>
