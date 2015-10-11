@@ -1,12 +1,12 @@
 package com.github.tttppp.startChipsCalculator.ui;
 
-import com.github.tttppp.startChipsCalculator.util.IdGenerator;
-
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+
+import com.github.tttppp.startChipsCalculator.util.IdGenerator;
 
 public class NumberOfColoursChangedListener implements TextWatcher {
 
@@ -34,7 +34,8 @@ public class NumberOfColoursChangedListener implements TextWatcher {
 			for (int colour = 0; colour < numberOfColours; colour++) {
 				EditText colourQuantity = new EditText(chipCountContainer.getContext());
 				colourQuantity.setId(IdGenerator.generateViewId());
-				colourQuantity.setInputType(InputType.TYPE_NUMBER_VARIATION_NORMAL);
+				colourQuantity.setRawInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_NORMAL);
+				colourQuantity.addTextChangedListener(inputListener);
 				chipCountContainer.addView(colourQuantity);
 			}
 		}
