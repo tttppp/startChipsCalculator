@@ -1,6 +1,9 @@
 package com.github.tttppp.startChipsCalculator.ui;
 
+import com.github.tttppp.startChipsCalculator.util.IdGenerator;
+
 import android.text.Editable;
+import android.text.InputType;
 import android.text.TextWatcher;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -12,11 +15,11 @@ public class NumberOfColoursChangedListener implements TextWatcher {
 	private LinearLayout chipCountContainer;
 
 	public NumberOfColoursChangedListener(EditText input, InputListener inputListener,
-                                          LinearLayout chipCountContainer) {
-	    this.input = input;
-	    this.inputListener = inputListener;
-	    this.chipCountContainer = chipCountContainer;
-    }
+	                                      LinearLayout chipCountContainer) {
+		this.input = input;
+		this.inputListener = inputListener;
+		this.chipCountContainer = chipCountContainer;
+	}
 
 	public void afterTextChanged(Editable unused) {
 		int numberOfColours = 0;
@@ -30,18 +33,20 @@ public class NumberOfColoursChangedListener implements TextWatcher {
 			chipCountContainer.removeAllViews();
 			for (int colour = 0; colour < numberOfColours; colour++) {
 				EditText colourQuantity = new EditText(chipCountContainer.getContext());
+				colourQuantity.setId(IdGenerator.generateViewId());
+				colourQuantity.setInputType(InputType.TYPE_NUMBER_VARIATION_NORMAL);
 				chipCountContainer.addView(colourQuantity);
 			}
 		}
-	    inputListener.afterTextChanged(null);
-    }
+		inputListener.afterTextChanged(null);
+	}
 
 	public void beforeTextChanged(CharSequence arg0, int arg1, int arg2, int arg3) {
-	    
-    }
+
+	}
 
 	public void onTextChanged(CharSequence arg0, int arg1, int arg2, int arg3) {
-	    
-    }
+
+	}
 
 }

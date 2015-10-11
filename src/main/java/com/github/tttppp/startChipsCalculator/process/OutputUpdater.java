@@ -53,9 +53,13 @@ public class OutputUpdater {
 			try {
 				quantitiesOfChips.add(Integer.valueOf(quantityString.toString().trim()));
 			} catch (NumberFormatException e) {
-				// TODO Error handling.
-				return;
+				// Assume the rest are deliberately missing.
+				break;
 			}
+		}
+		if (quantitiesOfChips.size() == 0) {
+			// TODO Error handling.
+			return;
 		}
 		while (quantitiesOfChips.size() < numberOfColours) {
 			quantitiesOfChips.add(quantitiesOfChips.get(quantitiesOfChips.size() - 1));
