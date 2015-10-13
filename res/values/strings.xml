@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="hello">Please enter a regex and select a dictionary</string>
+    <string name="app_name">RegexEvaluator</string>
+    <string name="hint">Enter regular expression here</string>
+
+</resources>
